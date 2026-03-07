@@ -29,6 +29,12 @@ Er is reeds een eerste demo gemaakt met **SimPy** (zonnepanelen + verbruiker + b
 
 ---
 
+Deze grafiek wil ik benaderen als validatie van het DES systeem.
+
+![met en zonder huisbatterij](consumptie_optimalisatie_123.png)
+
+---
+
 ## 2. Aanleiding en context
 Voor nieuwe energiesystemen met meerdere subsystemen is het lastig om vroeg in het ontwerptraject snel te testen:
 - welke regelstrategie stabiel is,
