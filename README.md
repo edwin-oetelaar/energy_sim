@@ -33,6 +33,11 @@ Deze grafiek wil ik benaderen als validatie van het DES systeem.
 
 ![met en zonder huisbatterij](consumptie_optimalisatie_123.png)
 
+- Dit is de uitkomst van de simulatie met 10 kWh batterij en 20 kWp maximaal PV vermogen bij volle zon.
+- De dag is 1 en 2 januari.
+
+![simulatie resultaat](experiment_simpy/simulatie_resultaat.png)
+
 ---
 
 ## 2. Aanleiding en context

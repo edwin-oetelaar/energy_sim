@@ -6,3 +6,12 @@ Een vaste basislast met lichte stijging overdag.
 Een ochtendpiek (rond 07:30) van ongeveer 1,5 uur breed.
 Een bredere, hoge avondpiek (rond 19:30) van ongeveer 2,5 uur breed.
 Het levert een vloeiende curve op die heel mooi de grafiek uit je schets nabootst.
+
+
+Kleine thuisaccu	
+
+4 – 5 kWh	
+
+2,0 – 3,0 kW	
+
+Geschikt voor 1-2 persoons huishoudens met een verbruik rond 2.500 kWh/jaar.

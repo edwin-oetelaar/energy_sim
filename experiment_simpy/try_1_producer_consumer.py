@@ -121,8 +121,8 @@ if __name__ == "__main__":
     # Simpy omgeving configureren
     env = simpy.Environment()
     
-    # Maak systeem aan: Capaciteit van 50.0 kWh met initieel 10.0 kWh in de batterij
-    mijn_systeem = EnergieSysteem(env, capaciteit=50.0, initiele_lading=10.0)
+    # Maak systeem aan: Capaciteit van 10.0 kWh met initieel 5.0 kWh in de batterij
+    mijn_systeem = EnergieSysteem(env, capaciteit=10.0, initiele_lading=5.0)
     
     # Koppel de processen (actoren) aan de omgeving
     env.process(zonnepanelen_proces(env, mijn_systeem))
