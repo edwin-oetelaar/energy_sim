@@ -1,8 +1,9 @@
 import simpy
+import try1_zon_opbrengst_model as zon_model
 # experiment 1 : producer consumer voor HTES
 # door : Edwin van den Oetelaar
 # datum : 7 maart 2026
-    
+
 class EnergieSysteem:
     def __init__(self, env, capaciteit, initiele_lading):
         self.env = env
@@ -15,14 +16,35 @@ class EnergieSysteem:
     def log_status(self, actie):
         print(f"[{self.env.now:7.2f}] {actie:15} | Batterij: {self.batterij.level:7.2f} kWh")
 
-def bron_proces(env, systeem):
+# def bron_proces(env, systeem):
+#     """Genereert energie in discrete tijdsblokken."""
+#     while True:
+#         # Een niet-triviale, geparameteriseerde functie voor opwekking
+#         opwekking = 5.0 if (env.now % 24) < 12 else 0.0 
+#         if opwekking > 0:
+#             yield systeem.batterij.put(opwekking)
+#             systeem.log_status("Zon schijnt")
+#         yield env.timeout(1) # Check elk uur
+
+def zonnepanelen_proces(env, systeem):
     """Genereert energie in discrete tijdsblokken."""
+    """Gebaseerd op try1_zon_opbrengst_model.py"""
+
+    Opgesteld_vermogen = 1000 # 1000 KWp max (1 MWp) vermogen bij volle zon
+
     while True:
-        # Een niet-triviale, geparameteriseerde functie voor opwekking
-        opwekking = 5.0 if (env.now % 24) < 12 else 0.0 
+
+        # Een niet-triviale functie voor opwekking
+        dag = int(env.now // 24) + 1
+        uur = env.now % 24
+        opwekking = zon_model.zon_opbrengst_nl(dag, uur)
+
         if opwekking > 0:
-            yield systeem.batterij.put(opwekking)
-            systeem.log_status("Zon schijnt")
+            systeem.log_status("Zon schijnt dag %d uur %d aantal %d %%  " % (dag,uur,opwekking * 100))
+            yield systeem.batterij.put(opwekking * Opgesteld_vermogen)
+        else:
+            systeem.log_status("Zon schijnt niet")
+        
         yield env.timeout(1) # Check elk uur
 
 def verbruiker_proces(env, systeem, setpoint_high, setpoint_low):
@@ -35,7 +57,7 @@ def verbruiker_proces(env, systeem, setpoint_high, setpoint_low):
 # 'put_queue' and 
 # 'get_queue' attributes (similar to Resource.queue).
 
-        niveau = systeem.batterij.level
+        niveau = systeem.batterij.level # level is in kWh
         
         # Logica op basis van setpoints (discrete functies)
         if niveau > setpoint_high and not apparaat_aan:
@@ -46,8 +68,9 @@ def verbruiker_proces(env, systeem, setpoint_high, setpoint_low):
             systeem.log_status("Setpoint UIT")
 
         if apparaat_aan:
-            verbruik = 3.0
+            verbruik = 3.0 # is in kWh
             # De energiebalans wordt hier direct bijgewerkt
+            # als er voldoende energie in zit voor een uur, onttrekken we deze
             if systeem.batterij.level >= verbruik:
                 yield systeem.batterij.get(verbruik)
             else:
@@ -60,9 +83,11 @@ def verbruiker_proces(env, systeem, setpoint_high, setpoint_low):
 # 
 env = simpy.Environment()
 
-mijn_systeem = EnergieSysteem(env, capaciteit=50.0, initiele_lading=10.0)
+mijn_systeem = EnergieSysteem(env, capaciteit=50.0, initiele_lading=10.0) # waarden in kWh
 # Start de processen
-env.process(bron_proces(env, mijn_systeem))
+# env.process(bron_proces(env, mijn_systeem))
+env.process(zonnepanelen_proces(env, mijn_systeem))
 env.process(verbruiker_proces(env, mijn_systeem, setpoint_high=25.0, setpoint_low=5.0))
 # Run voor 48 uur
+# We kunnen ook een simulator maken voor minuut resolutie, dan moeten wel alles aanpassen
 env.run(until=48)

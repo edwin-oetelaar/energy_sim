@@ -1,5 +1,6 @@
 #!/bin/bash
-
+# door : Edwin van den Oetelaar
+# datum : 7 maart 2026
 # Exit script when any command fails
 set -e
 

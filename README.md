@@ -3,10 +3,12 @@
 **Door Edwin van den Oetelaar (zaterdagproject)**  
 **Doelgroep:** collega engineers en researchers (HBO praktijkgericht onderzoek)
 
-- **Lectoraat High Tech Embedded Software​**
-- *We do applied research on smart systems​*
+- **Lectoraat High Tech Embedded Software**
+- *We do applied research on smart systems*
 
-​
+Zie ook [High Tech Embedded Software](https://hightechembeddedsoftware.nl/) 
+En ook [nationaal energie dashboard](https://ned.nl/nl/datacatalogus)
+
 ---
 
 ## 1. Managementsamenvatting
