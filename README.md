@@ -6,7 +6,7 @@
 - **Lectoraat High Tech Embedded Software**
 - *We do applied research on smart systems*
 
-Zie ook [High Tech Embedded Software](https://hightechembeddedsoftware.nl/) 
+Zie ook [High Tech Embedded Software](https://www.htesfontysict.nl/about/) 
 En ook [nationaal energie dashboard](https://ned.nl/nl/datacatalogus)
 
 ---
