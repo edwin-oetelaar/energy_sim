@@ -36,7 +36,7 @@ if [ -f "requirements.txt" ]; then
     pip install -r requirements.txt
 else
     # Fallback if requirements.txt somehow doesn't exist
-    pip install "simpy>=4.0.0"
+    pip install "simpy>=4.0.0" "matplotlib" "pandas"
 fi
 
 echo "========================================="

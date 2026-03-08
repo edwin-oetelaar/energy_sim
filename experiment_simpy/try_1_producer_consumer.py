@@ -1,31 +1,36 @@
 import simpy
+import math
+from dataclasses import dataclass, field
+from typing import Callable, List, Dict
+
 import matplotlib.pyplot as plt
-import try1_zon_opbrengst_model as zon_model
-import try2_verbruik_model as verbruik_model
+import production_v1 as zon_model
+import consumption_v1 as verbruik_model
+from batterij_sim_v1 import Battery
 
 # Experiment 1 : Producer-consumer voor HTES
 # Door : Edwin van den Oetelaar
 # Datum : 7 maart 2026
 
-class EnergieSysteem:
-    """Vertegenwoordigt het energiesysteem inclusief de thuisbatterij en meetpunten."""
-    def __init__(self, env, capaciteit, initiele_lading):
-        self.env = env
-        # De 'Container' dwingt de wet van behoud van energie af (vol=vol, leeg=leeg)
-        # https://simpy.readthedocs.io/en/latest/topical_guides/resources.html#containers
-        self.batterij = simpy.Container(env, capacity=capaciteit, init=initiele_lading)
+# class EnergieSysteem:
+#     """Vertegenwoordigt het energiesysteem inclusief de thuisbatterij en meetpunten."""
+#     def __init__(self, env, capaciteit, initiele_lading):
+#         self.env = env
+#         # De 'Container' dwingt de wet van behoud van energie af (vol=vol, leeg=leeg)
+#         # https://simpy.readthedocs.io/en/latest/topical_guides/resources.html#containers
+#         self.batterij = simpy.Container(env, capacity=capaciteit, init=initiele_lading)
         
-        # Lijsten om historische gegevens (per uur) bij te houden voor de grafiek
-        self.tijd_log = []
-        self.opwekking_log = []
-        self.verbruik_log = []
-        self.batterij_log = []
-        self.net_levering_log = [] # Hoeveel we terugleveren aan het net
-        self.net_afname_log = []   # Hoeveel we uit het net halen
+#         # Lijsten om historische gegevens (per uur) bij te houden voor de grafiek
+#         self.tijd_log = []
+#         self.opwekking_log = []
+#         self.verbruik_log = []
+#         self.batterij_log = []
+#         self.net_levering_log = [] # Hoeveel we terugleveren aan het net
+#         self.net_afname_log = []   # Hoeveel we uit het net halen
 
-    def log_status(self, actie):
-        """Hulpfunctie om statusmeldingen met tijdstempel in de console te printen."""
-        print(f"[{self.env.now:7.2f}] {actie:15} | Batterij: {self.batterij.level:7.2f} kWh")
+#     def log_status(self, actie):
+#         """Hulpfunctie om statusmeldingen met tijdstempel in de console te printen."""
+#         print(f"[{self.env.now:7.2f}] {actie:15} | Batterij: {self.batterij.level:7.2f} kWh")
 
 
 def zonnepanelen_proces(env, systeem):
@@ -114,43 +119,127 @@ def monitor_proces(env, systeem):
         yield env.timeout(1)
 
 
+@dataclass
+class EnergySystem:
+    env: simpy.Environment
+    battery: Battery
+    load_profile: Callable[[int, float], float]   # functie van (dag, uur) -> kW
+    pv_profile: Callable[[int, float], float]     # functie van (dag, uur) -> kW
+    dt_minutes: int = 15
+
+    history: List[Dict] = field(default_factory=list)
+
+    def step(self):
+        t_h = self.env.now / 60.0
+        dt_h = self.dt_minutes / 60.0
+
+        dag = int(t_h // 24) + 1
+        uur = t_h % 24
+
+        load_kw = self.load_profile(dag, uur)
+        pv_kw = self.pv_profile(dag, uur)
+
+        surplus_kw = pv_kw - load_kw
+
+        batt_charge_kw = 0.0
+        batt_discharge_kw = 0.0
+        grid_import_kw = 0.0
+        grid_export_kw = 0.0
+
+        if surplus_kw > 0:
+            # Eerst batterij laden
+            batt_charge_kw = self.battery.charge(surplus_kw, dt_h)
+            grid_export_kw = surplus_kw - batt_charge_kw
+
+        else:
+            deficit_kw = -surplus_kw
+            # Eerst batterij ontladen
+            batt_discharge_kw = self.battery.discharge(deficit_kw, dt_h)
+            grid_import_kw = deficit_kw - batt_discharge_kw
+
+        self.history.append({
+            "time_h": t_h,
+            "load_kw": load_kw,
+            "pv_kw": pv_kw,
+            "soc_kwh": self.battery.soc_kwh,
+            "batt_charge_kw": batt_charge_kw,
+            "batt_discharge_kw": batt_discharge_kw,
+            "grid_import_kw": grid_import_kw,
+            "grid_export_kw": grid_export_kw,
+        })
+
+    def run(self, duration_hours: float):
+        n_steps = int(duration_hours * 60 / self.dt_minutes)
+        for _ in range(n_steps):
+            self.step()
+            yield self.env.timeout(self.dt_minutes)
+
 # ==============================================================================
 # Simulatie Startpunt
 # ==============================================================================
+
+def load_profile(dag: int, uur: float) -> float:
+    return verbruik_model.stroom_verbruik_woning(dag, uur)
+
+def pv_profile(dag: int, uur: float) -> float:
+    # 20 kWp maximaal PV vermogen bij volle zon
+    Opgesteld_vermogen = 20 
+    
+    fractie = zon_model.zon_opbrengst_nl(dag, uur)
+    return fractie * Opgesteld_vermogen
+
+
 if __name__ == "__main__":
     # Simpy omgeving configureren
     env = simpy.Environment()
-    
-    # Maak systeem aan: Capaciteit van 10.0 kWh met initieel 5.0 kWh in de batterij
-    mijn_systeem = EnergieSysteem(env, capaciteit=10.0, initiele_lading=5.0)
-    
-    # Koppel de processen (actoren) aan de omgeving
-    env.process(zonnepanelen_proces(env, mijn_systeem))
-    env.process(verbruiker_proces(env, mijn_systeem))
-    env.process(monitor_proces(env, mijn_systeem))
-    
-    # Draai de simulatie voor een periode van 48 uur
-    print("Start simulatie voor 48 uur...")
-    env.run(until=48)
-    print("Simulatie voltooid.")
+
+    battery = Battery(
+        capacity_kwh=10.0,
+        max_charge_kw=4.0,
+        max_discharge_kw=4.0,
+        eta_charge=0.95,
+        eta_discharge=0.95,
+        soc_kwh=5.0
+    )
+
+    system = EnergySystem(
+        env=env,
+        battery=battery,
+        load_profile=load_profile,
+        pv_profile=pv_profile,
+        dt_minutes=15
+    )
+
+    env.process(system.run(duration_hours=48))
+    env.run()  
+ 
+    import pandas as pd
     
     # ==============================================================================
     # Resultaten Plotten
     # ==============================================================================
     print("Genereren van de grafiek...")
     
-    plt.figure(figsize=(12, 6))
+    # Converteer geschiedenis naar pandas DataFrame voor makkelijk plotten
+    df = pd.DataFrame(system.history)
+    
+    plt.figure(figsize=(14, 8))
     
     # Plot opwekking en verbruik in lijngrafieken
-    plt.plot(mijn_systeem.tijd_log, mijn_systeem.opwekking_log, label='Opwekking (PV) [kW]', color='green', marker='o', markersize=4)
-    plt.plot(mijn_systeem.tijd_log, mijn_systeem.verbruik_log, label='Verbruik (Huis) [kW]', color='red', marker='x', markersize=4)
+    plt.plot(df["time_h"], df["pv_kw"], label='Opwekking (PV) [kW]', color='green', marker='o', markersize=3)
+    plt.plot(df["time_h"], df["load_kw"], label='Verbruik (Huis) [kW]', color='red', marker='x', markersize=3)
     
-    # Plot het batterijniveau als een stippellijn (dit is in kWh in plaats van de kW rates - 
-    # omdat onze stapgrootte 1h is, zijn kW en kWh over het uur numeriek vrijwel uitwisselbaar in deze plot)
-    plt.plot(mijn_systeem.tijd_log, mijn_systeem.batterij_log, label='Batterij Lading [kWh]', color='blue', linestyle='--', linewidth=2)
+    # Plot het batterijniveau als een stippellijn
+    plt.plot(df["time_h"], df["soc_kwh"], label='Batterij SoC [kWh]', color='blue', linestyle='--', linewidth=2)
+    
+    # Voeg opladen/ontladen en netstromen toe
+    plt.plot(df["time_h"], df["batt_charge_kw"], label='Batterij Laadt [kW]', color='cyan', linestyle=':', linewidth=1.5)
+    plt.plot(df["time_h"], df["batt_discharge_kw"], label='Batterij Ontlaadt [kW]', color='purple', linestyle=':', linewidth=1.5)
+    plt.plot(df["time_h"], df["grid_import_kw"], label='Net Import (Koop) [kW]', color='orange', linestyle='-', linewidth=1.5)
+    plt.plot(df["time_h"], df["grid_export_kw"], label='Net Export (Verkoop) [kW]', color='pink', linestyle='-', linewidth=1.5)
     
     # Opmaak
-    plt.title('Simulatie: Energie Opwekking vs. Verbruik over 48 Uur')
+    plt.title('Simulatie: Energie Opwekking vs. Verbruik vs. Batterij over 48 Uur')
     plt.xlabel('Tijd (Uren vanaf start)')
     plt.ylabel('Energie (kWh of kW)')
     plt.legend()
