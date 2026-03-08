@@ -1,3 +1,7 @@
+# Experiment 1 : Producer-consumer voor HTES
+# Door : Edwin van den Oetelaar
+# Datum : 7 en 8 maart 2026
+
 import simpy
 import math
 from dataclasses import dataclass, field
@@ -7,31 +11,6 @@ import matplotlib.pyplot as plt
 import production_v1 as zon_model
 import consumption_v1 as verbruik_model
 from batterij_sim_v1 import Battery
-
-# Experiment 1 : Producer-consumer voor HTES
-# Door : Edwin van den Oetelaar
-# Datum : 7 maart 2026
-
-# class EnergieSysteem:
-#     """Vertegenwoordigt het energiesysteem inclusief de thuisbatterij en meetpunten."""
-#     def __init__(self, env, capaciteit, initiele_lading):
-#         self.env = env
-#         # De 'Container' dwingt de wet van behoud van energie af (vol=vol, leeg=leeg)
-#         # https://simpy.readthedocs.io/en/latest/topical_guides/resources.html#containers
-#         self.batterij = simpy.Container(env, capacity=capaciteit, init=initiele_lading)
-        
-#         # Lijsten om historische gegevens (per uur) bij te houden voor de grafiek
-#         self.tijd_log = []
-#         self.opwekking_log = []
-#         self.verbruik_log = []
-#         self.batterij_log = []
-#         self.net_levering_log = [] # Hoeveel we terugleveren aan het net
-#         self.net_afname_log = []   # Hoeveel we uit het net halen
-
-#     def log_status(self, actie):
-#         """Hulpfunctie om statusmeldingen met tijdstempel in de console te printen."""
-#         print(f"[{self.env.now:7.2f}] {actie:15} | Batterij: {self.batterij.level:7.2f} kWh")
-
 
 def zonnepanelen_proces(env, systeem):
     """Genereert energie (opwekking) op basis van het zonnemodel en stopt dit in de batterij."""
@@ -96,29 +75,6 @@ def verbruiker_proces(env, systeem):
         yield env.timeout(1)
 
 
-def monitor_proces(env, systeem):
-    """Meet elk uur de status van het systeem en bewaart de waarden om later te kunnen plotten."""
-    Opgesteld_vermogen = 20
-    
-    while True:
-        dag = int(env.now // 24) + 1
-        uur = env.now % 24
-        
-        # Bereken opwekking en verbruik op dit tijdstip met de modellen
-        fractie = zon_model.zon_opbrengst_nl(dag, uur)
-        opwekking = fractie * Opgesteld_vermogen
-        verbruik = verbruik_model.stroom_verbruik_woning(uur)
-        
-        # Sla alle datapunten op
-        systeem.tijd_log.append(env.now)
-        systeem.opwekking_log.append(opwekking)
-        systeem.verbruik_log.append(verbruik)
-        systeem.batterij_log.append(systeem.batterij.level)
-        
-        # Wacht een uur tot de volgende meting
-        yield env.timeout(1)
-
-
 @dataclass
 class EnergySystem:
     env: simpy.Environment
@@ -129,11 +85,13 @@ class EnergySystem:
 
     history: List[Dict] = field(default_factory=list)
 
-    def step(self):
+    def step(self, start_dag: int = 1):
         t_h = self.env.now / 60.0
         dt_h = self.dt_minutes / 60.0
 
-        dag = int(t_h // 24) + 1
+        # Bereken de actuele dag (start_dag + verstreken dagen)
+        # Zorg dat de dag tussen 1 en 365 blijft
+        dag = ((start_dag - 1 + int(t_h // 24)) % 365) + 1
         uur = t_h % 24
 
         load_kw = self.load_profile(dag, uur)
@@ -168,10 +126,10 @@ class EnergySystem:
             "grid_export_kw": grid_export_kw,
         })
 
-    def run(self, duration_hours: float):
+    def run(self, duration_hours: float, start_dag: int = 1):
         n_steps = int(duration_hours * 60 / self.dt_minutes)
         for _ in range(n_steps):
-            self.step()
+            self.step(start_dag)
             yield self.env.timeout(self.dt_minutes)
 
 # ==============================================================================
@@ -210,7 +168,11 @@ if __name__ == "__main__":
         dt_minutes=15
     )
 
-    env.process(system.run(duration_hours=48))
+    # Kies hier de startdag voor de simulatie (1-365)
+    # 1 = Start januari, 152 = Start juni
+    start_dag = 152
+    
+    env.process(system.run(duration_hours=48, start_dag=start_dag))
     env.run()  
  
     import pandas as pd
@@ -239,7 +201,7 @@ if __name__ == "__main__":
     plt.plot(df["time_h"], df["grid_export_kw"], label='Net Export (Verkoop) [kW]', color='pink', linestyle='-', linewidth=1.5)
     
     # Opmaak
-    plt.title('Simulatie: Energie Opwekking vs. Verbruik vs. Batterij over 48 Uur')
+    plt.title(f'Simulatie: Energie Opwekking vs. Verbruik vs. Batterij (Start: Dag {start_dag})')
     plt.xlabel('Tijd (Uren vanaf start)')
     plt.ylabel('Energie (kWh of kW)')
     plt.legend()

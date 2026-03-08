@@ -40,7 +40,7 @@ Deze grafiek wil ik benaderen als validatie van het DES systeem.
 
 ![simulatie resultaat](simulatie_resultaat.png)
 
-### Dit is het resultaat na verbeteren model en plotten import/export van netwerk, wat opvalt is dat de batterij ongeveer 5 kWh te klein is... ;-)
+### Dit is het resultaat na verbeteren model en plotten import/export van netwerk, wat opvalt is dat de batterij ongeveer 5 kWh te klein is... in januari ;-)
 
 ---
 
