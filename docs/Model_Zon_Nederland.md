@@ -25,4 +25,4 @@ Variabelen in de praktijk:
 
 De totale jaarlijkse zonuren in Nederland liggen gemiddeld rond de 1500-1600 uur, met uitschieters aan de kust (Zeeland/Waddeneilanden).
 
-![grafiek_zon_nl](zonne_opbrengst_benadering_NL.png)
+![grafiek_zon_nl](../experiment_simpy/zonne_opbrengst_benadering_NL.png)

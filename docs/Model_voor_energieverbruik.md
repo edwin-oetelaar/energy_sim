@@ -1,6 +1,6 @@
-Model voor energieverbruik (Elektra)
+# Model voor energieverbruik (Elektra)
 
-![verbruik curve](verbruikscurve_model_v1.png)
+![verbruik curve](../experiment_simpy/verbruikscurve_model_v1.png)
 
 
 Ik heb de zwarte lijn uit je schets (de zogenaamde 'duck curve'/'dubbele piek') benaderd met een wiskundig model op basis van overlappende functies (zogenaamde Gauss-curves voor de pieken).
@@ -15,4 +15,4 @@ Het levert een vloeiende curve op die heel mooi de grafiek uit je schets naboots
 
 | capaciteit | vermogen |  toepassing |
 | --- | --- | --- |
-| 4 – 5 kWh	| 2,0 – 3,0 kW | Geschikt voor 1-2 persoons huishoudens met een verbruik rond 2.500 kWh/jaar.
+|   6 kWh	| 2,0 kW | Geschikt voor 1-2 persoons huishoudens met een verbruik rond 2.500 kWh/jaar.
