@@ -12,67 +12,67 @@ import production_v1 as zon_model
 import consumption_v1 as verbruik_model
 from batterij_sim_v1 import Battery
 
-def zonnepanelen_proces(env, systeem):
-    """Genereert energie (opwekking) op basis van het zonnemodel en stopt dit in de batterij."""
-    # 20 kWp maximaal PV vermogen bij volle zon
-    Opgesteld_vermogen = 20 
+# def zonnepanelen_proces(env, systeem):
+#     """Genereert energie (opwekking) op basis van het zonnemodel en stopt dit in de batterij."""
+#     # 20 kWp maximaal PV vermogen bij volle zon
+#     Opgesteld_vermogen = 20 
 
-    while True:
-        dag = int(env.now // 24) + 1
-        uur = env.now % 24
+#     while True:
+#         dag = int(env.now // 24) + 1
+#         uur = env.now % 24
         
-        # Ophalen van de relatieve opbrengst (0.0 tot 1.0) via het model
-        fractie = zon_model.zon_opbrengst_nl(dag, uur)
-        opwekking = fractie * Opgesteld_vermogen
+#         # Ophalen van de relatieve opbrengst (0.0 tot 1.0) via het model
+#         fractie = zon_model.zon_opbrengst_nl(dag, uur)
+#         opwekking = fractie * Opgesteld_vermogen
 
-        if opwekking > 0:
-            systeem.log_status(f"Zon (Opwek: {opwekking:.2f}kW)")
+#         if opwekking > 0:
+#             systeem.log_status(f"Zon (Opwek: {opwekking:.2f}kW)")
             
-            # Bereken de actuele beschikbare ruimte in de batterij
-            vrije_ruimte = systeem.batterij.capacity - systeem.batterij.level
-            te_laden = min(opwekking, vrije_ruimte)
+#             # Bereken de actuele beschikbare ruimte in de batterij
+#             vrije_ruimte = systeem.batterij.capacity - systeem.batterij.level
+#             te_laden = min(opwekking, vrije_ruimte)
             
-            # Stop stroom in de batterij (mits er plek is)
-            if te_laden > 0:
-                yield systeem.batterij.put(te_laden)
+#             # Stop stroom in de batterij (mits er plek is)
+#             if te_laden > 0:
+#                 yield systeem.batterij.put(te_laden)
                 
-            # Rest van de stroom wordt afgekeurd of teruggeleverd aan het net
-            overschot = opwekking - te_laden
-            # Registreren van levering aan netwerk voor de huidige simulatiestap (optioneel)
-        else:
-            systeem.log_status("Zon schijnt niet")
+#             # Rest van de stroom wordt afgekeurd of teruggeleverd aan het net
+#             overschot = opwekking - te_laden
+#             # Registreren van levering aan netwerk voor de huidige simulatiestap (optioneel)
+#         else:
+#             systeem.log_status("Zon schijnt niet")
         
-        # Wacht een uur tot de volgende simulatie update
-        yield env.timeout(1)
+#         # Wacht een uur tot de volgende simulatie update
+#         yield env.timeout(1)
 
 
-def verbruiker_proces(env, systeem):
-    """Verbruikt energie (belasting) op basis van het huishoudelijk verbruiksmodel."""
-    while True:
-        dag = int(env.now // 24) + 1
-        uur = env.now % 24
+# def verbruiker_proces(env, systeem):
+#     """Verbruikt energie (belasting) op basis van het huishoudelijk verbruiksmodel."""
+#     while True:
+#         dag = int(env.now // 24) + 1
+#         uur = env.now % 24
         
-        # Bepaal het benodigde huishoudelijke verbruik in dit uur (in kWh)
-        verbruik = verbruik_model.stroom_verbruik_woning(uur)
-        niveau = systeem.batterij.level
+#         # Bepaal het benodigde huishoudelijke verbruik in dit uur (in kWh)
+#         verbruik = verbruik_model.stroom_verbruik_woning(uur)
+#         niveau = systeem.batterij.level
         
-        # We proberen de elektriciteit primair uit de batterij te halen
-        if niveau >= verbruik:
-            # Batterij heeft voldoende capaciteit voor het verbruik van dit uur
-            if verbruik > 0:
-                yield systeem.batterij.get(verbruik)
-        else:
-            # Batterij heeft te weinig stroom, we halen hem helemaal leeg
-            # De rest van de stroom kopen we bij het lichtnet.
-            if niveau > 0:
-                yield systeem.batterij.get(niveau)
-            else:
-                # Batterij is al leeg, we vragen 0 uit de container.
-                # Dit doen we via timeout(0) in plaats van get(0) om ValueError van Simpy te vermijden
-                yield env.timeout(0) 
+#         # We proberen de elektriciteit primair uit de batterij te halen
+#         if niveau >= verbruik:
+#             # Batterij heeft voldoende capaciteit voor het verbruik van dit uur
+#             if verbruik > 0:
+#                 yield systeem.batterij.get(verbruik)
+#         else:
+#             # Batterij heeft te weinig stroom, we halen hem helemaal leeg
+#             # De rest van de stroom kopen we bij het lichtnet.
+#             if niveau > 0:
+#                 yield systeem.batterij.get(niveau)
+#             else:
+#                 # Batterij is al leeg, we vragen 0 uit de container.
+#                 # Dit doen we via timeout(0) in plaats van get(0) om ValueError van Simpy te vermijden
+#                 yield env.timeout(0) 
                 
-        # Wacht een uur tot de volgende update
-        yield env.timeout(1)
+#         # Wacht een uur tot de volgende update
+#         yield env.timeout(1)
 
 
 @dataclass
